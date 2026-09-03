@@ -30,23 +30,25 @@ jobs:
   steps:
   - task: CopyFilesOverSSH@0
     inputs:
-      sshEndpoint: 'front-vm-ssh'
+      sshEndpoint: 'frontend-sc-ssh'
       sourceFolder: '$(Pipeline.Workspace)/react-build'
       contents: '*.zip'
       targetFolder: '/home/azureuser/deploy'
+      readyTimeout: '20000'
 
   - task: SSH@0
     inputs:
-      sshEndpoint: 'front-vm-ssh'
+      sshEndpoint: 'frontend-sc-ssh'
       runOptions: 'inline'
       inline: |
         sudo apt update
         sudo apt install nginx unzip -y
-
+        
         sudo rm -rf /var/www/html/*
-
+        
         sudo unzip -o /home/azureuser/deploy/*.zip -d /var/www/html/
-
+        
         sudo systemctl restart nginx
         sudo systemctl enable nginx
+      readyTimeout: '20000'
       
