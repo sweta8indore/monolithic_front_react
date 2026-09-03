@@ -29,6 +29,13 @@ jobs:
 - job: cd
   dependsOn: ci
   steps:
+
+  # STEP 1 - Download artifact
+  - task: DownloadPipelineArtifact@2
+    inputs:
+      buildType: 'current'
+      artifactName: 'react-build'
+      targetPath: '$(Pipeline.Workspace)/react-build'
   - task: CopyFilesOverSSH@0
     inputs:
       sshEndpoint: 'frontend-sc-ssh'
