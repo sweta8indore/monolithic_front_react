@@ -27,6 +27,7 @@ jobs:
       artifact: 'react-build'
 
 - job: cd
+  dependsOn: ci
   steps:
   - task: CopyFilesOverSSH@0
     inputs:
