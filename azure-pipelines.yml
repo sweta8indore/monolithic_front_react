@@ -2,24 +2,51 @@ trigger: none
 
 pool: cicdpool
 
-steps:
-- task: PowerShell@2
-  inputs:
-    targetType: 'inline'
-    script: |
-      npm install
-      npm run build
+jobs:
+- job: ci
 
-- task: ArchiveFiles@2
-  inputs:
-    rootFolderOrFile: '$(Build.BinariesDirectory)'
-    includeRootFolder: true
-    archiveType: 'zip'
-    archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
-    replaceExistingArchive: true
+  steps:
+  - task: PowerShell@2
+    inputs:
+      targetType: 'inline'
+      script: |
+        npm install
+        npm run build
 
-- task: PublishPipelineArtifact@1
-  inputs:
-    targetPath: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
-    artifact: 'react-build'
-    
+  - task: ArchiveFiles@2
+    inputs:
+      rootFolderOrFile: '$(Build.BinariesDirectory)'
+      includeRootFolder: true
+      archiveType: 'zip'
+      archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+      replaceExistingArchive: true
+
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+      artifact: 'react-build'
+
+- job: cd
+  steps:
+  - task: CopyFilesOverSSH@0
+    inputs:
+      sshEndpoint: 'front-vm-ssh'
+      sourceFolder: '$(Pipeline.Workspace)/react-build'
+      contents: '*.zip'
+      targetFolder: '/home/azureuser/deploy'
+
+  - task: SSH@0
+    inputs:
+      sshEndpoint: 'front-vm-ssh'
+      runOptions: 'inline'
+      inline: |
+        sudo apt update
+        sudo apt install nginx unzip -y
+
+        sudo rm -rf /var/www/html/*
+
+        sudo unzip -o /home/azureuser/deploy/*.zip -d /var/www/html/
+
+        sudo systemctl restart nginx
+        sudo systemctl enable nginx
+      
