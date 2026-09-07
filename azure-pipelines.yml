@@ -62,14 +62,14 @@ stages:
         artifactName: 'react-build'
         targetPath: '$(Pipeline.Workspace)/react-build'
 
-    # STEP 2 - Copy ZIP to VM
+    # STEP 2 - Copy ZIP directly to /home/azureuser
     - task: CopyFilesOverSSH@0
       displayName: 'Copy Artifact to VM'
       inputs:
         sshEndpoint: 'frontend-sc-ssh'
         sourceFolder: '$(Pipeline.Workspace)/react-build'
         contents: '*.zip'
-        targetFolder: '/home/azureuser/deploy'
+        targetFolder: '/home/azureuser'
         readyTimeout: '20000'
 
     # STEP 3 - Deploy using Nginx
@@ -84,9 +84,11 @@ stages:
 
           sudo rm -rf /var/www/html/*
 
-          sudo unzip -o /home/azureuser/deploy/*.zip -d /var/www/html/
+          sudo unzip -o /home/azureuser/$(Build.BuildId).zip -d /var/www/html/
 
           sudo systemctl restart nginx
           sudo systemctl enable nginx
+
+          rm -f /home/azureuser/$(Build.BuildId).zip
 
         readyTimeout: '20000'
