@@ -1,78 +1,59 @@
 trigger: none
 
-pool: cicdpool
+pool:
+  name: cicdpool
+
+resources:
+  pipelines:
+  - pipeline: ci
+    source: YOUR-CI-PIPELINE-NAME
+    trigger: none
 
 stages:
-
-# ==============================
-# STAGE 1 - CI
-# ==============================
-- stage: CI
-  displayName: 'Build React Application'
-
-  jobs:
-  - job: Build
-    displayName: 'Build and Publish Artifact'
-
-    steps:
-    - task: PowerShell@2
-      displayName: 'Install Dependencies and Build'
-      inputs:
-        targetType: 'inline'
-        script: |
-          npm install
-          npm run build
-
-    - task: ArchiveFiles@2
-      displayName: 'Create ZIP Artifact'
-      inputs:
-        rootFolderOrFile: '$(Build.BinariesDirectory)'
-        includeRootFolder: true
-        archiveType: 'zip'
-        archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
-        replaceExistingArchive: true
-
-    - task: PublishPipelineArtifact@1
-      displayName: 'Publish React Artifact'
-      inputs:
-        targetPath: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
-        artifact: 'react-build'
-
-
-# ==============================
-# STAGE 2 - CD
-# ==============================
 - stage: CD
   displayName: 'Deploy React Application'
 
-  dependsOn: CI
-  condition: succeeded()
-
   jobs:
   - job: Deploy
-    displayName: 'Deploy to Frontend Server'
+    displayName: 'Deploy to Frontend VM'
 
     steps:
 
-    # STEP 1 - Download artifact
-    - task: DownloadPipelineArtifact@2
-      displayName: 'Download React Artifact'
-      inputs:
-        buildType: 'current'
-        artifactName: 'react-build'
-        targetPath: '$(Pipeline.Workspace)/react-build'
+    # Download artifact from latest successful CI pipeline
+    - download: ci
+      artifact: react-build
 
-    # STEP 2 - Copy ZIP directly to /home/azureuser
+    # Check SSH user and create deploy folder in that user's home
+    - task: SSH@0
+      displayName: 'Create Deploy Folder'
+      inputs:
+        sshEndpoint: 'frontend-sc-ssh'
+        runOptions: 'inline'
+        inline: |
+          echo "Logged in user:"
+          whoami
+
+          echo "Home directory:"
+          echo $HOME
+
+          mkdir -p $HOME/deploy
+
+          echo "Deploy directory:"
+          ls -ld $HOME/deploy
+
+        readyTimeout: '20000'
+
+    # Copy ZIP to remote user's home/deploy directory
     - task: CopyFilesOverSSH@0
       displayName: 'Copy Artifact to VM'
       inputs:
         sshEndpoint: 'frontend-sc-ssh'
-        sourceFolder: '$(Pipeline.Workspace)/react-build'
+        sourceFolder: '$(Pipeline.Workspace)/ci/react-build'
         contents: '*.zip'
-        targetFolder: '/home/azureuser'
+        targetFolder: 'deploy'
         readyTimeout: '20000'
 
-    # STEP 3 - Deploy using Nginx
+    # Deploy application
     - task: SSH@0
       displayName: 'Deploy Application on Nginx'
       inputs:
@@ -84,11 +65,11 @@ stages:
 
           sudo rm -rf /var/www/html/*
 
-          sudo unzip -o /home/azureuser/$(Build.BuildId).zip -d /var/www/html/
+          sudo unzip -o $HOME/deploy/*.zip -d /var/www/html/
 
           sudo systemctl restart nginx
           sudo systemctl enable nginx
 
-          rm -f /home/azureuser/$(Build.BuildId).zip
+          rm -f $HOME/deploy/*.zip
 
         readyTimeout: '20000'
