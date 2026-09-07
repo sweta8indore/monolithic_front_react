@@ -12,6 +12,7 @@ stages:
     displayName: 'Build and Publish Artifact'
 
     steps:
+
     - task: PowerShell@2
       displayName: 'Install Dependencies and Build'
       inputs:
@@ -20,11 +21,46 @@ stages:
           npm install
           npm run build
 
+          Write-Host "===== Checking Build Output ====="
+
+          if (Test-Path "$(System.DefaultWorkingDirectory)/dist") {
+              Write-Host "Vite dist folder found"
+
+              New-Item -ItemType Directory `
+                -Force `
+                -Path "$(Build.ArtifactStagingDirectory)/site"
+
+              Copy-Item `
+                "$(System.DefaultWorkingDirectory)/dist/*" `
+                "$(Build.ArtifactStagingDirectory)/site/" `
+                -Recurse -Force
+          }
+          elseif (Test-Path "$(System.DefaultWorkingDirectory)/build") {
+              Write-Host "React build folder found"
+
+              New-Item -ItemType Directory `
+                -Force `
+                -Path "$(Build.ArtifactStagingDirectory)/site"
+
+              Copy-Item `
+                "$(System.DefaultWorkingDirectory)/build/*" `
+                "$(Build.ArtifactStagingDirectory)/site/" `
+                -Recurse -Force
+          }
+          else {
+              Write-Host "ERROR: dist or build folder not found"
+              Get-ChildItem "$(System.DefaultWorkingDirectory)"
+              exit 1
+          }
+
+          Write-Host "===== Files to be deployed ====="
+          Get-ChildItem "$(Build.ArtifactStagingDirectory)/site" -Recurse
+
     - task: ArchiveFiles@2
-      displayName: 'Create ZIP Artifact'
+      displayName: 'Create React ZIP'
       inputs:
-        rootFolderOrFile: '$(Build.BinariesDirectory)'
-        includeRootFolder: true
+        rootFolderOrFile: '$(Build.ArtifactStagingDirectory)/site'
+        includeRootFolder: false
         archiveType: 'zip'
         archiveFile: '$(Build.ArtifactStagingDirectory)/react-build.zip'
         replaceExistingArchive: true
