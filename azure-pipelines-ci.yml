@@ -1,0 +1,36 @@
+trigger: none
+
+pool:
+  name: cicdpool
+
+stages:
+- stage: CI
+  displayName: 'Build React Application'
+
+  jobs:
+  - job: Build
+    displayName: 'Build and Publish Artifact'
+
+    steps:
+    - task: PowerShell@2
+      displayName: 'Install Dependencies and Build'
+      inputs:
+        targetType: 'inline'
+        script: |
+          npm install
+          npm run build
+
+    - task: ArchiveFiles@2
+      displayName: 'Create ZIP Artifact'
+      inputs:
+        rootFolderOrFile: '$(Build.BinariesDirectory)'
+        includeRootFolder: true
+        archiveType: 'zip'
+        archiveFile: '$(Build.ArtifactStagingDirectory)/react-build.zip'
+        replaceExistingArchive: true
+
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish React Artifact'
+      inputs:
+        targetPath: '$(Build.ArtifactStagingDirectory)/react-build.zip'
+        artifact: 'react-build'
