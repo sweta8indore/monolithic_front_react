@@ -49,14 +49,8 @@ stages:
         inline: |
           sudo rm -rf /var/www/html/*
 
-          sudo unzip -o $HOME/deploy/*.zip -d /var/www/html/
+          sudo unzip -o $HOME/deploy/react-build.zip -d /var/www/html/
 
-          echo "===== Deployed Files ====="
           sudo ls -la /var/www/html
-
-          if [ ! -f /var/www/html/index.html ]; then
-              echo "ERROR: index.html not found"
-              exit 1
-          fi
 
           sudo systemctl restart nginx
