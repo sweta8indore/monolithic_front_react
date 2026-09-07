@@ -24,7 +24,8 @@ stages:
           Write-Host "===== Checking Build Output ====="
 
           if (Test-Path "$(System.DefaultWorkingDirectory)/dist") {
-              Write-Host "Vite dist folder found"
+
+              Write-Host "dist folder found"
 
               New-Item -ItemType Directory `
                 -Force `
@@ -36,7 +37,8 @@ stages:
                 -Recurse -Force
           }
           elseif (Test-Path "$(System.DefaultWorkingDirectory)/build") {
-              Write-Host "React build folder found"
+
+              Write-Host "build folder found"
 
               New-Item -ItemType Directory `
                 -Force `
@@ -48,13 +50,11 @@ stages:
                 -Recurse -Force
           }
           else {
-              Write-Host "ERROR: dist or build folder not found"
+
+              Write-Host "ERROR: build output not found"
               Get-ChildItem "$(System.DefaultWorkingDirectory)"
               exit 1
           }
-
-          Write-Host "===== Files to be deployed ====="
-          Get-ChildItem "$(Build.ArtifactStagingDirectory)/site" -Recurse
 
     - task: ArchiveFiles@2
       displayName: 'Create React ZIP'
