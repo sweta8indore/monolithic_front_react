@@ -6,7 +6,7 @@ pool:
 resources:
   pipelines:
   - pipeline: ci
-    source: YOUR-CI-PIPELINE-NAME
+    source: sweta8indore.monolithic_front_react
     trigger: none
 
 stages:
