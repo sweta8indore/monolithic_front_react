@@ -3,12 +3,6 @@ trigger: none
 pool:
   name: cicdpool
 
-resources:
-  pipelines:
-  - pipeline: ci
-    source: sweta8indore.monolithic_front_react
-    trigger: none
-
 stages:
 - stage: CD
   displayName: 'Deploy React Application'
@@ -19,8 +13,15 @@ stages:
 
     steps:
 
-    - download: ci
-      artifact: react-build
+    - task: DownloadPipelineArtifact@2
+      displayName: 'Download Latest CI Artifact'
+      inputs:
+        buildType: 'specific'
+        project: 'cicd-infra'
+        definition: 'YOUR_CI_PIPELINE_ID'
+        buildVersionToDownload: 'latest'
+        artifactName: 'react-build'
+        targetPath: '$(Pipeline.Workspace)/react-build'
 
     - task: SSH@0
       displayName: 'Create Deploy Folder'
@@ -28,12 +29,6 @@ stages:
         sshEndpoint: 'frontend-sc-ssh'
         runOptions: 'inline'
         inline: |
-          echo "Logged-in user:"
-          whoami
-
-          echo "Home:"
-          echo $HOME
-
           mkdir -p $HOME/deploy
           rm -f $HOME/deploy/*.zip
 
@@ -41,27 +36,22 @@ stages:
       displayName: 'Copy Artifact to VM'
       inputs:
         sshEndpoint: 'frontend-sc-ssh'
-        sourceFolder: '$(Pipeline.Workspace)/ci/react-build'
+        sourceFolder: '$(Pipeline.Workspace)/react-build'
         contents: '*.zip'
         targetFolder: 'deploy'
         readyTimeout: '20000'
 
     - task: SSH@0
-      displayName: 'Deploy Application on Nginx'
+      displayName: 'Deploy Application'
       inputs:
         sshEndpoint: 'frontend-sc-ssh'
         runOptions: 'inline'
         inline: |
-          echo "===== Artifact ====="
-          ls -lh $HOME/deploy
-
-          echo "===== Cleaning old site ====="
           sudo rm -rf /var/www/html/*
 
-          echo "===== Extracting site ====="
           sudo unzip -o $HOME/deploy/*.zip -d /var/www/html/
 
-          echo "===== Files deployed ====="
+          echo "===== Deployed Files ====="
           sudo ls -la /var/www/html
 
           if [ ! -f /var/www/html/index.html ]; then
@@ -70,5 +60,3 @@ stages:
           fi
 
           sudo systemctl restart nginx
-
-          echo "Deployment successful"
