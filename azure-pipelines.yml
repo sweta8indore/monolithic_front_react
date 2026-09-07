@@ -19,31 +19,22 @@ stages:
 
     steps:
 
-    # Download artifact from latest successful CI pipeline
     - download: ci
       artifact: react-build
 
-    # Check SSH user and create deploy folder in that user's home
     - task: SSH@0
       displayName: 'Create Deploy Folder'
       inputs:
         sshEndpoint: 'frontend-sc-ssh'
         runOptions: 'inline'
         inline: |
-          echo "Logged in user:"
+          echo "User:"
           whoami
-
-          echo "Home directory:"
+          echo "Home:"
           echo $HOME
-
           mkdir -p $HOME/deploy
+          rm -f $HOME/deploy/*.zip
 
-          echo "Deploy directory:"
-          ls -ld $HOME/deploy
-
-        readyTimeout: '20000'
-
-    # Copy ZIP to remote user's home/deploy directory
     - task: CopyFilesOverSSH@0
       displayName: 'Copy Artifact to VM'
       inputs:
@@ -53,18 +44,27 @@ stages:
         targetFolder: 'deploy'
         readyTimeout: '20000'
 
-    # Deploy application
     - task: SSH@0
       displayName: 'Deploy Application on Nginx'
       inputs:
         sshEndpoint: 'frontend-sc-ssh'
         runOptions: 'inline'
         inline: |
+          echo "===== ZIP ====="
+          ls -lh $HOME/deploy
+
           sudo rm -rf /var/www/html/*
 
           sudo unzip -o $HOME/deploy/*.zip -d /var/www/html/
 
+          echo "===== DEPLOYED FILES ====="
+          sudo ls -la /var/www/html
+
+          if [ ! -f /var/www/html/index.html ]; then
+            echo "ERROR: index.html not found"
+            exit 1
+          fi
+
           sudo systemctl restart nginx
 
-          sudo systemctl status nginx --no-pager
-        readyTimeout: '20000' 
+          echo "Deployment successful"
