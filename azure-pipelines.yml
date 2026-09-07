@@ -18,7 +18,7 @@ stages:
       inputs:
         buildType: 'specific'
         project: 'cicd-infra'
-        definition: 'YOUR_CI_PIPELINE_ID'
+        definition: '6'
         buildVersionToDownload: 'latest'
         artifactName: 'react-build'
         targetPath: '$(Pipeline.Workspace)/react-build'
