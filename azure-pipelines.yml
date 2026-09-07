@@ -28,10 +28,12 @@ stages:
         sshEndpoint: 'frontend-sc-ssh'
         runOptions: 'inline'
         inline: |
-          echo "User:"
+          echo "Logged-in user:"
           whoami
+
           echo "Home:"
           echo $HOME
+
           mkdir -p $HOME/deploy
           rm -f $HOME/deploy/*.zip
 
@@ -50,19 +52,21 @@ stages:
         sshEndpoint: 'frontend-sc-ssh'
         runOptions: 'inline'
         inline: |
-          echo "===== ZIP ====="
+          echo "===== Artifact ====="
           ls -lh $HOME/deploy
 
+          echo "===== Cleaning old site ====="
           sudo rm -rf /var/www/html/*
 
+          echo "===== Extracting site ====="
           sudo unzip -o $HOME/deploy/*.zip -d /var/www/html/
 
-          echo "===== DEPLOYED FILES ====="
+          echo "===== Files deployed ====="
           sudo ls -la /var/www/html
 
           if [ ! -f /var/www/html/index.html ]; then
-            echo "ERROR: index.html not found"
-            exit 1
+              echo "ERROR: index.html not found"
+              exit 1
           fi
 
           sudo systemctl restart nginx
